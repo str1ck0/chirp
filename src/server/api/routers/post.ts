@@ -28,4 +28,8 @@ export const postRouter = createTRPCRouter({
 
     return post ?? null;
   }),
+
+  getAll: publicProcedure.query(({ ctx }) => {
+    return ctx.db.post.findMany();
+  })
 });
