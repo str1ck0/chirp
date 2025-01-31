@@ -12,14 +12,18 @@ export const postRouter = createTRPCRouter({
     }),
 
   create: publicProcedure
-    .input(z.object({ name: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      return ctx.db.post.create({
-        data: {
-          name: input.name,
-        },
-      });
-    }),
+  .input(z.object({ 
+    content: z.string().min(1).max(255), // max(255) to match @db.VarChar(255)
+    authorId: z.string()
+  }))
+  .mutation(async ({ ctx, input }) => {
+    return ctx.db.post.create({
+      data: {
+        content: input.content,
+        authorId: input.authorId,
+      },
+    });
+  }),
 
   getLatest: publicProcedure.query(async ({ ctx }) => {
     const post = await ctx.db.post.findFirst({
