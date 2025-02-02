@@ -8,14 +8,14 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 const filterUserForClient = (user: User) => {
   return {
     id: user.id, 
-    name: user.username, 
+    username: user.username, 
     profilePicture: user.imageUrl
   }
 }
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
 
-export const postRouter = createTRPCRouter({
+export const postsRouter = createTRPCRouter({
   hello: publicProcedure
     .input(z.object({ text: z.string() }))
     .query(({ input }) => {
@@ -64,7 +64,7 @@ export const postRouter = createTRPCRouter({
     return posts.map((post) => {
       const author = users.find((user) => user.id === post.authorId);
 
-      if (!author)
+      if (!author?.username)
         throw new TRPCError({ 
           code: "INTERNAL_SERVER_ERROR",
           message: `Author not found for post ${post.id}`
@@ -72,7 +72,10 @@ export const postRouter = createTRPCRouter({
 
       return {
         post,
-        author
+        author: {
+          ...author,
+          username: author.username,
+        }
       };
     });
   }),
