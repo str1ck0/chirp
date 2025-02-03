@@ -1,10 +1,11 @@
 import Head from "next/head";
 import { api } from "~/utils/api";
-import type { NextPage } from "next";
+import type { GetStaticProps, NextPage } from "next";
 import { PageLayout } from "~/components/layout";
 import Image from "next/image";
 import { LoadingPage } from "~/components/loading";
 import { PostView } from "~/components/postview";
+import { generateSSGHelper } from "~/server/helpers/ssgHelper";
 
 const ProfileFeed = (props: {userId: string}) => {
 
@@ -23,19 +24,17 @@ const ProfileFeed = (props: {userId: string}) => {
   </div>
 }
 
-const ProfilePage: NextPage = () => {
-  const { data, isLoading } = api.profile.getUserbyUsername.useQuery({
-    username: "str1ck0"
+const ProfilePage: NextPage<{ username: string }> = ({username}) => {
+  const { data } = api.profile.getUserbyUsername.useQuery({
+    username,
   });
-
-  if (isLoading) return <div>Loading...</div>;
 
   if (!data) return <div>User not found</div>;
 
   return (
     <>
       <Head>
-        <title>Profile</title>
+        <title>{data.username ?? data.externalUsername}</title>
       </Head>
       <PageLayout>
         <div className="h-36 bg-slate-600 relative">
@@ -59,6 +58,29 @@ const ProfilePage: NextPage = () => {
     </>
   );
 };
+
+export const getStaticProps: GetStaticProps = async (context) => {
+  const ssg = generateSSGHelper();
+
+  const slug = context.params?.slug;
+
+  if (typeof slug !== "string") throw new Error("No slug");
+
+  const username = slug.replace("@", "");
+
+  await ssg.profile.getUserbyUsername.prefetch({ username });
+
+  return {
+    props: {
+      trpcState: ssg.dehydrate(),
+      username,
+    },
+  };
+};
+
+export const getStaticPaths = () => {
+  return { paths: [], fallback: "blocking" };
+}
 
 export default ProfilePage;
 

@@ -16,11 +16,22 @@ export const profileRouter = createTRPCRouter({
     });
 
     const user = data[0];
+
     if (!user) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: `User with username ${input.username} not found`,
-      });
+      // if we hit here we need an unsanitized username so hit api once more
+      const { data: users } = (
+        await clerkClient.users.getUserList({
+          limit: 200,
+        })
+      );
+      const foundUser = users.find((user) => user.externalAccounts.some((account) => account.username === input.username));
+      if (!foundUser) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        });
+      }
+      return filterUserForClient(foundUser);
     }
 
     return filterUserForClient(user);
