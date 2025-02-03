@@ -3,7 +3,7 @@ import { createClerkClient } from '@clerk/nextjs/server'
 import { TRPCError } from '@trpc/server';
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/api/trpc";
 
 const filterUserForClient = (user: User) => {
   return {
@@ -23,20 +23,6 @@ export const postsRouter = createTRPCRouter({
         greeting: `Hello ${input.text}`,
       };
     }),
-
-  create: publicProcedure
-  .input(z.object({ 
-    content: z.string().min(1).max(255), // max(255) to match @db.VarChar(255)
-    authorId: z.string()
-  }))
-  .mutation(async ({ ctx, input }) => {
-    return ctx.db.post.create({
-      data: {
-        content: input.content,
-        authorId: input.authorId,
-      },
-    });
-  }),
 
   getLatest: publicProcedure.query(async ({ ctx }) => {
     const post = await ctx.db.post.findFirst({
@@ -79,4 +65,24 @@ export const postsRouter = createTRPCRouter({
       };
     });
   }),
+
+  create: privateProcedure
+    .input(
+      z.object({
+        content: z.string().emoji().min(1).max(280),
+      })
+    )
+    .mutation(async ({ctx, input }) => {
+    
+    const authorId = ctx.userId
+
+    const post = await ctx.db.post.create({
+      data: {
+        authorId, 
+        content: input.content,
+      },
+    });
+
+    return post;
+  })
 });
